@@ -1,0 +1,29 @@
+{
+  "name": "xtool-skills",
+  "owner": {
+    "name": "xTool",
+    "email": "developer@xtool.com"
+  },
+  "metadata": {
+    "description": "Public Claude plugin marketplace for xTool skills.",
+    "version": "0.1.0",
+    "tags": [
+      "xtool",
+      "claude-plugin",
+      "skills",
+      "generator"
+    ],
+    "repository": "https://github.com/xtool-official/xtool-skills"
+  },
+  "plugins": [
+    {
+      "name": "creating-generators",
+      "description": "Use when creating, scaffolding, extending, refactoring, migrating, or standardizing a generator, including requests for runtime APIs, full/embed modes, parameter panels, template flows, or generator workspace architecture.",
+      "source": "./skills/creating-generators",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    }
+  ]
+}
