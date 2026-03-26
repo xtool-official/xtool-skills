@@ -280,7 +280,7 @@ A new generator must include the following interfaces by default, without requir
 
 After code generation is completed, you must prompt the developer to open the xtool generator upload page:
 
-- [xtool generator upload](https://www-dev.atomm.com/generator-upload)
+- [xtool generator upload](https://www.atomm.com/generator-upload)
 
 Also tell the user that the resources need to be packaged as a zip file, and the zip file must contain an HTML file.
 

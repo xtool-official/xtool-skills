@@ -342,7 +342,7 @@ If `Can standardization be claimed = no`, you must additionally include:
 
 After the code is completed, prompt the developer by default to open:
 
-- [xtool generator upload](https://www-dev.atomm.com/generator-upload)
+- [xtool generator upload](https://www.atomm.com/generator-upload)
 
 Also tell the user that the resources need to be packaged as a zip file, and the zip file must contain an HTML file.
 
