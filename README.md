@@ -37,7 +37,7 @@ claude plugin marketplace add xtool-official/xtool-skills
 Install the skill:
 
 ```bash
-claude plugin install creating-generators@xtool-official-xtool-skills
+claude plugin install creating-generators@xtool-skills
 ```
 
 Reload plugins if needed:
