@@ -28,6 +28,8 @@ It is especially useful for requests like:
 
 ## Install
 
+1.1 Method 1: Manual Installation
+
 Add this marketplace:
 
 ```bash
@@ -44,6 +46,17 @@ Reload plugins if needed:
 
 ```bash
 /reload-plugins
+```
+
+1.2 Method 2: Let AI Install Them
+
+```text
+Please help me install the skills related to creating-generators.
+1. Add the marketplace source (if not already added):
+   xtool-official/xtool-skills
+2. Then install the following plugins:
+   - creating-generators
+Tell me the result after installation.
 ```
 
 ## How To Use
