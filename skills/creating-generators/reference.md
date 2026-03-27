@@ -54,6 +54,10 @@ For new generators, the default shell path is:
 - the full-mode host mounts `generator-workbench`
 - generator-specific code stays in runtime and rendering modules
 
+For a new generator in initial development, the official host shell is mandatory by default.
+
+Do not replace `generator-workbench` with a custom full-page shell unless the user explicitly waives the official host shell.
+
 Only skip this path when the user explicitly requests a reduced-scope build, a custom shell, or a runtime-only delivery.
 
 ## Standard Runtime Interface
@@ -107,6 +111,8 @@ src/
   platform/
     sdk.ts
 ```
+
+For a new generator in initial development, `pages/full.ts` should host `generator-workbench` rather than a custom full-page shell, unless the user explicitly waives the official host shell.
 
 For progressive refactors, the directory does not need to change immediately, but responsibilities should gradually separate into:
 
