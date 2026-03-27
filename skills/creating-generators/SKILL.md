@@ -169,13 +169,14 @@ Do not default to a complete rewrite unless the user explicitly wants to start o
 These are hard constraints, not just defaults:
 
 1. `generator-sdk` handles platform capabilities, not page shell or embedding protocol
-2. a standard generator must expose runtime interfaces instead of only exporting a page
-3. the parameter panel must come from `PanelSchema`, and hosts must be able to consume partial parameters through `PanelFilter`
-4. template pages consume runtime; they do not copy generator-private DOM or private business logic
-5. template import must take effect through runtime `setState()` / `patchState()` + `panelFilter`
-6. template JSON must use a unified template protocol; do not invent generator-private field names freely
-7. in `embed` mode, do not render top navigation or shell-level platform entries, and do not depend on global `body` layout
-8. before the completion gate is satisfied, do not claim "completed to the full standard"
+2. when the task needs the standard platform shell, prefer `generator-workbench` instead of hand-writing login, template, or export shell actions in each project
+3. a standard generator must expose runtime interfaces instead of only exporting a page
+4. the parameter panel must come from `PanelSchema`, and hosts must be able to consume partial parameters through `PanelFilter`
+5. template pages consume runtime; they do not copy generator-private DOM or private business logic
+6. template import must take effect through runtime `setState()` / `patchState()` + `panelFilter`
+7. template JSON must use a unified template protocol; do not invent generator-private field names freely
+8. in `embed` mode, do not render top navigation or shell-level platform entries, and do not depend on global `body` layout
+9. before the completion gate is satisfied, do not claim "completed to the full standard"
 
 ## Completion Gate
 

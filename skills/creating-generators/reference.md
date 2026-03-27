@@ -6,6 +6,7 @@
 |---|---|---|
 | `generator-sdk` | login, cloud save, history, credits, billing, export, Studio | page shell, parameter panel structure, template page embedding |
 | `Generator Runtime Contract` | `full/embed`, state, parameter schema, export interfaces, events | login dialogs, sharing dialogs, CMS, publishing |
+| `generator-workbench` | official shell, top bar, template actions, login entry, floating export actions, mounting runtime panel/canvas | generator business state, custom rendering logic |
 | host page | navigation, page layout, template page structure, calling the runtime | defining the generator's internal business state |
 
 ## SDK Capability Selection And MCP Feature Mapping
@@ -46,6 +47,12 @@ GeneratorSDK.init({
 | Vue 3 engineered generator | `starter-vue-runtime` |
 
 For old-generator refactors, treat a starter as a structural reference rather than a full overwrite plan.
+
+For new generators, the recommended shell path is:
+
+- starter generates runtime structure
+- host page mounts `generator-workbench`
+- generator-specific code stays in runtime and rendering modules
 
 ## Standard Runtime Interface
 
