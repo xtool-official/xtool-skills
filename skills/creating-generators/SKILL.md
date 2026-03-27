@@ -47,6 +47,14 @@ There are two capability layers:
 - `generator-sdk` handles platform capabilities
 - `Generator Runtime Contract` handles `full/embed`, state, panel schema, export, and host integration
 
+For new generators, default to the standard shell path:
+
+- the runtime starter provides the generator runtime structure
+- the full-mode host mounts `generator-workbench`
+- generator-specific business logic stays inside runtime, rendering, and panel-schema modules
+
+Do not hand-write a custom full-page shell for a new generator unless the user explicitly asks for a reduced-scope build, a custom shell, or a runtime-only delivery.
+
 If the task involves templates, template pages, sub-generators, preset parameters, publish/import template, or partial-parameter editing, template capability must use a unified template protocol instead of generator-private JSON.
 
 ## Default Workflow
@@ -57,8 +65,9 @@ Ask only one question at a time. Use this single workflow as the authority for e
 2. bootstrap `generator-sdk-mcp`
 3. determine task framing: new build / compatibility refactor / standardization refactor / reduced-scope task
 4. ask the minimum branch-specific questions
-5. implement with `generator-sdk` + runtime + `PanelSchema`, and template protocol when needed
-6. apply the completion gate and wrap up with the required status fields
+5. implement the generator runtime with starter + `generator-sdk` + runtime + `PanelSchema`
+6. for new generators, default the full-mode host to `generator-workbench`; only skip it for explicit reduced-scope / custom-shell / runtime-only requests, and use the template protocol when needed
+7. apply the completion gate and wrap up with the required status fields
 
 ## MCP Bootstrap
 
@@ -125,6 +134,9 @@ Default behavior:
 - enable both `full` and `embed`
 - expose `window.__GENERATOR_RUNTIME__`
 - provide `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, `export`, and `subscribe`
+- for new generators, default `full` mode to a host page that mounts `generator-workbench`
+- keep `embed` mode as pure runtime rendering without shell-level platform UI
+- only skip `generator-workbench` when the user explicitly asks for a reduced-scope build, a custom shell, or a runtime-only delivery
 
 Default recommendations:
 
@@ -169,14 +181,15 @@ Do not default to a complete rewrite unless the user explicitly wants to start o
 These are hard constraints, not just defaults:
 
 1. `generator-sdk` handles platform capabilities, not page shell or embedding protocol
-2. when the task needs the standard platform shell, prefer `generator-workbench` instead of hand-writing login, template, or export shell actions in each project
-3. a standard generator must expose runtime interfaces instead of only exporting a page
-4. the parameter panel must come from `PanelSchema`, and hosts must be able to consume partial parameters through `PanelFilter`
-5. template pages consume runtime; they do not copy generator-private DOM or private business logic
-6. template import must take effect through runtime `setState()` / `patchState()` + `panelFilter`
-7. template JSON must use a unified template protocol; do not invent generator-private field names freely
-8. in `embed` mode, do not render top navigation or shell-level platform entries, and do not depend on global `body` layout
-9. before the completion gate is satisfied, do not claim "completed to the full standard"
+2. for new generators, the default full-mode host must mount `generator-workbench` unless the user explicitly requests a reduced-scope build, a custom shell, or a runtime-only delivery
+3. do not hand-write a custom top bar, template action shell, login entry, or floating export shell for a new generator when `generator-workbench` should be used
+4. a standard generator must expose runtime interfaces instead of only exporting a page
+5. the parameter panel must come from `PanelSchema`, and hosts must be able to consume partial parameters through `PanelFilter`
+6. template pages consume runtime; they do not copy generator-private DOM or private business logic
+7. template import must take effect through runtime `setState()` / `patchState()` + `panelFilter`
+8. template JSON must use a unified template protocol; do not invent generator-private field names freely
+9. in `embed` mode, do not render top navigation or shell-level platform entries, and do not depend on global `body` layout
+10. before the completion gate is satisfied, do not claim "completed to the full standard"
 
 ## Completion Gate
 
@@ -191,6 +204,7 @@ Do not claim any of the following unless this gate is satisfied:
 - the required platform capabilities for this task are integrated through `generator-sdk`
 - the complete `Generator Runtime Contract` is exposed
 - working `full` / `embed` dual entry points are provided, unless the user explicitly waives one
+- for new generators, the full-mode host uses `generator-workbench`, unless the user explicitly requests a reduced-scope build, a custom shell, or a runtime-only delivery
 - `window.__GENERATOR_RUNTIME__` is exposed
 - `getPanelSchema()` is provided and can be filtered by the host
 - if templates are involved, a unified template protocol is integrated
@@ -226,6 +240,9 @@ If `Can standardization be claimed = no`, explicitly say that the result has not
 - asking a non-technical user to install `generator-sdk-mcp` manually before checking whether the AI can do it
 - installing MCP without verifying that the server or tools are actually available
 - stopping the task because MCP is unavailable instead of using documentation fallback
+- creating a custom full-page shell for a new generator instead of mounting `generator-workbench`
+- treating "minimal SDK capabilities" as permission to skip `generator-workbench`
+- treating `generator-workbench` as a later enhancement instead of the default full-mode host path for new generators
 - generating only `full` and forgetting `embed`
 - missing `getPanelSchema()`
 - hardcoding the panel so the host cannot filter fields

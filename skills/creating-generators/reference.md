@@ -48,11 +48,13 @@ GeneratorSDK.init({
 
 For old-generator refactors, treat a starter as a structural reference rather than a full overwrite plan.
 
-For new generators, the recommended shell path is:
+For new generators, the default shell path is:
 
 - starter generates runtime structure
-- host page mounts `generator-workbench`
+- the full-mode host mounts `generator-workbench`
 - generator-specific code stays in runtime and rendering modules
+
+Only skip this path when the user explicitly requests a reduced-scope build, a custom shell, or a runtime-only delivery.
 
 ## Standard Runtime Interface
 
