@@ -72,7 +72,7 @@ Do not describe "partially aligned with the skill" as "completed according to th
 Ask in the following order, and ask only one question at a time:
 
 1. generator name
-2. real platform `appKey`
+2. auto-generated development `appKey` for new generators, or existing production `appKey` for refactors
 3. tech stack: `html` or `vue`
 4. SDK capability selection
 5. whether template-authoring capability is needed
@@ -97,18 +97,19 @@ After asking these questions, perform a gap analysis before implementation. Do n
 
 ## `appKey` Rules
 
-- `appKey` must be the real platform `appKey`
+- for new generators, default to an auto-generated development `appKey`
+- use the format `dev_<random>`
 - it will be written directly into:
 
 ```ts
 GeneratorSDK.init({
-  appKey: 'REAL_APP_KEY',
+  appKey: 'dev_xxx',
   env: 'prod',
 })
 ```
 
-- later CMS sharing-growth and credits / free-usage configuration will also be built around this identifier
-- do not treat a name-derived value as the real `appKey`
+- later CMS sharing-growth and credits / free-usage configuration may still use a real platform `appKey`
+- do not derive the value from the generator name
 - when refactoring an old generator, the default preference is to reuse the existing production `appKey`
 
 ## SDK Capability Selection And MCP Feature Mapping

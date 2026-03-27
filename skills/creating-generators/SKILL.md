@@ -46,7 +46,7 @@ Once a request is identified as a generator request, do not start with generic p
 You must first route it through the generator workflow and ask only one question at a time:
 
 - first determine whether it is a "new generator" or an "old generator refactor"
-- for the new-generator branch, ask at minimum: generator name -> real `appKey` -> `html` / `vue` -> SDK capabilities
+- for the new-generator branch, ask at minimum: generator name -> auto-generate development `appKey` -> `html` / `vue` -> SDK capabilities
 - for the refactor branch, ask at minimum: task framing (`compatibility refactor` / `standardization refactor`) -> old code location -> existing `appKey` / production identifier -> current technical form -> compatibility constraints
 
 ## Typical Trigger Examples
@@ -183,17 +183,18 @@ The generator name is used for:
 - default copy
 - optional slug / code suggestions
 
-#### Step 2: Ask For The Real `appKey`
+#### Step 2: Generate A Default Development `appKey`
 
 You must make the following clear:
 
-- `appKey` must be the real platform `appKey`
-- it will be written directly into `GeneratorSDK.init({ appKey })`
-- it will also be used later for CMS sharing-growth and credits configuration
+- for new generators, generate a development `appKey` automatically
+- use the format `dev_<random>`
+- write it directly into `GeneratorSDK.init({ appKey })`
+- do not block the developer just because the real platform `appKey` is not ready yet
 
-Do not write a name-derived value into the code as if it were the real `appKey`.
+Do not ask the developer for a real platform `appKey` in the new-generator branch unless they explicitly want to pin a specific value.
 
-If the developer does not have the real `appKey` yet, the default behavior is to stop and request it. Only if the developer explicitly asks for a placeholder implementation may you use a placeholder value, and you must clearly label it as requiring later replacement.
+If the task is refactoring an existing generator, ask whether the existing production `appKey` must be reused.
 
 #### Step 3: Confirm The Tech Stack
 
@@ -426,7 +427,7 @@ If production configuration is involved, also prompt the developer to check the 
 4. Template pages consume the runtime protocol and do not copy the generator's internal DOM directly.
 5. New generators should prefer a runtime starter instead of assembling the structure from blank HTML.
 6. Old generators should prefer progressive refactoring and should not default to a full rewrite.
-7. The real `appKey` must be provided or confirmed by the developer and cannot be derived from the generator name.
+7. For new generators, auto-generate a development `appKey`; for refactors, confirm whether the existing production `appKey` must be reused.
 8. Whenever template-authoring capability is involved, a unified template protocol must be enabled, and template JSON field names must not be freely invented.
 9. Template import must take effect through runtime `setState()` / `patchState()` + `panelFilter`.
 10. Do not implement template import as "directly replace the DOM".
@@ -440,7 +441,7 @@ If production configuration is involved, also prompt the developer to check the 
 
 1. Identify the intent to "develop a generator" or "refactor a generator"
 2. Determine first whether it is "new" or "refactor"
-3. New branch: ask for name -> `appKey` -> tech stack -> SDK capabilities -> template-authoring capability -> default to a runtime starter
+3. New branch: ask for name -> auto-generate development `appKey` -> tech stack -> SDK capabilities -> template-authoring capability -> default to a runtime starter
 4. Refactor branch: ask for name and code location -> `appKey` / production identifier -> current technical form -> existing capabilities -> compatibility constraints -> template handling -> refactor strategy
 5. Integrate `generator-sdk`
 6. Implement or fill in the `Generator Runtime Contract`
@@ -514,11 +515,12 @@ Do not hardcode these capabilities as custom postMessage protocols or page-priva
 
 ## How To Explain `appKey` To Developers
 
-When asking for the real `appKey`, use the following facts:
+When explaining `appKey`, use the following facts:
 
 - `appKey` is written into `GeneratorSDK.init({ appKey, env: 'prod' })`
-- it is the real platform identifier used to recognize the generator
-- later CMS sharing-growth and credits / free-usage configuration will also be built around this identifier
+- for new generators, the default generated value is a development `appKey` in the form `dev_<random>`
+- for old generators, the production `appKey` may need to be reused
+- later CMS sharing-growth and credits / free-usage configuration may still be built around the real platform identifier
 
 Do not explain `appKey` as "an alias of the generator name".
 
@@ -557,7 +559,7 @@ If the developer only says "help me build a generator", ask in this order:
 2. If it is new: what is the generator name?
 3. If it is a refactor: is this a `compatibility refactor` or a `standardization refactor`?
 4. If it is a refactor: where is the old code directory or repository?
-5. What is the real platform `appKey`? If one already exists in production, should the original `appKey` be reused?
+5. If it is a new generator: auto-generate a development `appKey`. If it is a refactor: ask whether the existing production `appKey` should be reused.
 6. Use `html` or `vue`? If it is an old generator, also ask whether the current form is a full page, bridge-based, or partial-runtime structure.
 7. Which SDK capabilities need to be integrated? Multi-select: login, SVG export, Open in Studio, credits, unified billing, cloud save, history.
 8. Is template-authoring capability needed? If the task involves templates, template pages, sub-generators, preset parameters, or allowing only part of the parameters to be adjusted, enable the `template` feature by default.
@@ -569,7 +571,7 @@ If the developer says "refactor the old generator and integrate `generator-sdk`"
 
 1. Is this a `compatibility refactor` or a `standardization refactor`?
 2. Where is the old code directory or repository?
-3. What is the real platform `appKey`? Should the original `appKey` be reused in production?
+3. What is the current production `appKey`? Should the original `appKey` be reused in production?
 4. What is the current technical form: `html` / `vue` / monolithic page / bridge / partial runtime?
 5. Which capabilities must remain completely unchanged?
 6. Which platform capabilities need to be integrated through `generator-sdk`?
@@ -606,7 +608,7 @@ If `Can standardization be claimed = no`, you must additionally include:
 - still rendering navigation and platform buttons in `embed` mode
 - extending a new generator with old bridge thinking instead of implementing runtime directly
 - rewriting the old generator immediately without first checking the current state and compatibility constraints
-- writing a name-derived value into SDK initialization before obtaining the real `appKey`
+- deriving the generated development `appKey` from the generator name instead of using a random `dev_<random>` value
 - inventing JSON fields freely in template scenarios instead of using a unified template protocol
 - completing only Stage 1/2 but saying in the wrap-up that the standardization refactor has already been completed according to the skill
 - defaulting to an "SDK + lightweight bridge" state without the user's authorization for staged delivery
