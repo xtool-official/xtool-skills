@@ -1,6 +1,6 @@
 ---
 name: creating-generators
-description: Use when creating or refactoring a generator that uses generator-sdk, runtime/full/embed, PanelSchema, template pages, or old generator standardization.
+description: Use when a request is about building or refactoring a generator with generator-sdk, runtime/full/embed, PanelSchema, template pages, or old-generator standardization.
 ---
 
 # Creating Generators
@@ -47,6 +47,18 @@ There are two capability layers:
 - `generator-sdk` handles platform capabilities
 - `Generator Runtime Contract` handles `full/embed`, state, panel schema, export, and host integration
 
+For new generators, default to the standard shell path:
+
+- the runtime starter provides the generator runtime structure
+- the full-mode host mounts `generator-workbench`
+- generator-specific business logic stays inside runtime, rendering, and panel-schema modules
+
+For a new generator in initial development, `generator-workbench` is mandatory for `full` mode by default.
+
+The AI must not build a custom full-page shell unless the user explicitly opts out of the official host shell.
+
+Missing MCP, starter code, or examples is not a waiver for skipping `generator-workbench`.
+
 If the task involves templates, template pages, sub-generators, preset parameters, publish/import template, or partial-parameter editing, template capability must use a unified template protocol instead of generator-private JSON.
 
 ## Default Workflow
@@ -56,9 +68,14 @@ Ask only one question at a time. Use this single workflow as the authority for e
 1. confirm this is really a generator task
 2. bootstrap `generator-sdk-mcp`
 3. determine task framing: new build / compatibility refactor / standardization refactor / reduced-scope task
-4. ask the minimum branch-specific questions
-5. implement with `generator-sdk` + runtime + `PanelSchema`, and template protocol when needed
-6. apply the completion gate and wrap up with the required status fields
+4. if this is a new generator in initial development, lock `full` mode to `generator-workbench` by default
+5. only unlock that decision if the user explicitly says not to use the official host shell, or explicitly requests a reduced-scope build, a custom shell, or a runtime-only delivery
+6. for a new generator, prefer the standard default path instead of asking configuration questions too early
+7. only ask follow-up questions when the user explicitly requests a non-default path, a reduced scope, a custom shell, Vue, or extra platform capabilities outside the default bundle
+8. implement the generator runtime with starter + `generator-sdk` + runtime + `PanelSchema`
+9. for new generators, keep the `generator-workbench` path even when MCP is missing, and use the template protocol when needed
+10. treat `generate_code` as a reduced-scope helper rather than the main new-generator path
+11. apply the completion gate and wrap up with the required status fields
 
 ## MCP Bootstrap
 
@@ -111,29 +128,70 @@ For reduced-scope tasks, say explicitly that the result is partial and do not cl
 
 ## New Generator Branch
 
-For a new generator, ask the minimum required questions in this order:
+### Official Host Shell Rule
 
-1. generator name
-2. tech stack: `html` or `vue`
-3. required SDK capabilities
-4. whether template-authoring capability is needed
+If the task is a new generator in initial development, `full` mode must use `generator-workbench`.
+
+Assume the official host shell is required unless the user explicitly states one of the following:
+
+- do not use the official host shell
+- use a custom shell
+- runtime-only delivery
+- reduced-scope build without the official host shell
+
+The following do NOT count as a waiver:
+
+- silence
+- ambiguity
+- "build a simple version first"
+- "build a demo first"
+- missing MCP or starter code
+- "we can integrate `generator-workbench` later"
+
+If there is no explicit waiver, building a custom full-page shell is a violation of this skill.
+
+For a new generator in initial development, do not ask configuration questions by default when a safe standard path already exists.
+
+Use the following defaults unless the user explicitly asks otherwise:
+
+- generator type: standard new generator
+- framework: `html`
+- starter: `starter-html-runtime`
+- official host shell: `generator-workbench`
+- feature bundle: `auth`, `credits`, `billing`, `export`, `template`
+- app key: auto-generate `dev_<random>`
+- runtime scope: `full` + `embed`
+- runtime interfaces: `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, `export`, and `subscribe`
+- browser runtime exposure: `window.__GENERATOR_RUNTIME__`
+
+Ask follow-up questions only when at least one of the following is true:
+
+1. the user explicitly requests `vue`
+2. the user explicitly requests a reduced-scope build
+3. the user explicitly requests a custom shell or runtime-only delivery
+4. the user explicitly requests extra platform capabilities such as `cloud` or `history`
+5. the request is actually an old-generator refactor rather than a new build
 
 Default behavior:
 
 - auto-generate a development `appKey` in the form `dev_<random>`
-- prefer a runtime starter
+- prefer `starter-html-runtime`
 - enable both `full` and `embed`
 - expose `window.__GENERATOR_RUNTIME__`
 - provide `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, `export`, and `subscribe`
+- for new generators, default `full` mode to a host page that mounts `generator-workbench`
+- keep `embed` mode as pure runtime rendering without shell-level platform UI
+- enable the `workbench-standard` feature bundle: `auth`, `credits`, `billing`, `export`, `template`
+- only skip `generator-workbench` when the user explicitly waives the official host shell by asking for a reduced-scope build, a custom shell, or a runtime-only delivery
 
 Default recommendations:
 
-- rapid vibe coding or static delivery -> `html`
-- engineered project or Vue ecosystem -> `vue`
-- `html` -> `starter-html-runtime`
-- `vue` -> `starter-vue-runtime`
+- default new-generator path -> `html` + `starter-html-runtime`
+- explicit Vue request -> `vue` + `starter-vue-runtime`
+- default SDK bundle -> `auth`, `credits`, `billing`, `export`, `template`
+- explicit extra platform capabilities -> add `cloud` and/or `history`
 
-If template capability is needed, enable the `template` feature, use a unified template protocol, and keep template pages parameter-driven through `panelFilter`.
+If templates are part of the request, keep using the default `template` feature, use a unified template protocol, and keep template pages parameter-driven through `panelFilter`.
 
 ## Refactor Branch
 
@@ -169,14 +227,19 @@ Do not default to a complete rewrite unless the user explicitly wants to start o
 These are hard constraints, not just defaults:
 
 1. `generator-sdk` handles platform capabilities, not page shell or embedding protocol
-2. when the task needs the standard platform shell, prefer `generator-workbench` instead of hand-writing login, template, or export shell actions in each project
-3. a standard generator must expose runtime interfaces instead of only exporting a page
-4. the parameter panel must come from `PanelSchema`, and hosts must be able to consume partial parameters through `PanelFilter`
-5. template pages consume runtime; they do not copy generator-private DOM or private business logic
-6. template import must take effect through runtime `setState()` / `patchState()` + `panelFilter`
-7. template JSON must use a unified template protocol; do not invent generator-private field names freely
-8. in `embed` mode, do not render top navigation or shell-level platform entries, and do not depend on global `body` layout
-9. before the completion gate is satisfied, do not claim "completed to the full standard"
+2. for a new generator in initial development, the default full-mode host must mount `generator-workbench` unless the user explicitly waives the official host shell
+3. do not hand-write a custom top bar, template action shell, login entry, or floating export shell for a new generator when `generator-workbench` should be used
+4. if the user has not explicitly waived the official host shell, the AI must not create a custom `full` page shell for a new generator in initial development
+5. if the user has not explicitly waived the official host shell, the AI must not add custom shell-level top bars, login buttons, export buttons, Studio buttons, or floating action shells in `full` mode
+6. missing MCP, starter code, or examples is not permission to skip `generator-workbench`
+7. for a new generator, any custom full-page shell requires an explicit user waiver that must be quoted in the final wrap-up
+8. a standard generator must expose runtime interfaces instead of only exporting a page
+9. the parameter panel must come from `PanelSchema`, and hosts must be able to consume partial parameters through `PanelFilter`
+10. template pages consume runtime; they do not copy generator-private DOM or private business logic
+11. template import must take effect through runtime `setState()` / `patchState()` + `panelFilter`
+12. template JSON must use a unified template protocol; do not invent generator-private field names freely
+13. in `embed` mode, do not render top navigation or shell-level platform entries, and do not depend on global `body` layout
+14. before the completion gate is satisfied, do not claim "completed to the full standard"
 
 ## Completion Gate
 
@@ -191,10 +254,13 @@ Do not claim any of the following unless this gate is satisfied:
 - the required platform capabilities for this task are integrated through `generator-sdk`
 - the complete `Generator Runtime Contract` is exposed
 - working `full` / `embed` dual entry points are provided, unless the user explicitly waives one
+- for new generators in initial development, the full-mode host uses `generator-workbench`, unless the user explicitly waives the official host shell
 - `window.__GENERATOR_RUNTIME__` is exposed
 - `getPanelSchema()` is provided and can be filtered by the host
 - if templates are involved, a unified template protocol is integrated
 - compatibility, migration, or CMS-related notes are included
+
+If `generator-workbench` is not used for a new generator in initial development, the final wrap-up must include the explicit user waiver. Otherwise, standardization cannot be claimed.
 
 If the current work is only:
 
@@ -217,8 +283,23 @@ After a generator task, the final response must include:
 - `Blockers or risks`
 - `Compatibility and migration notes`
 - `MCP path used`: existing MCP / installed MCP / documentation fallback
+- `Official host shell used`: yes / no
+- `If no, explicit user waiver`: quote the user request or say `none`
+- `Workbench integration evidence`: file paths, MCP path, or integration approach
 
 If `Can standardization be claimed = no`, explicitly say that the result has not yet reached the standardization completion state.
+
+## Hard Stop: Official Host Shell Violations
+
+Stop immediately and revise the approach if any of the following happens during a new generator initial build without an explicit waiver:
+
+- creating a custom `full` page shell
+- creating a custom `src/index.html` host shell for `full` mode
+- adding custom top bars, login buttons, export buttons, or Studio buttons in the shell
+- treating `generator-workbench` as a later enhancement
+- using "start simple first" or "just a demo first" as justification
+
+If any of these occur, discard that shell plan and return to the `generator-workbench` path.
 
 ## Common Mistakes
 
@@ -226,6 +307,15 @@ If `Can standardization be claimed = no`, explicitly say that the result has not
 - asking a non-technical user to install `generator-sdk-mcp` manually before checking whether the AI can do it
 - installing MCP without verifying that the server or tools are actually available
 - stopping the task because MCP is unavailable instead of using documentation fallback
+- asking new-generator users for `appKey`, framework, SDK features, or template support before applying the standard default path
+- creating a custom full-page shell for a new generator instead of mounting `generator-workbench`
+- treating "minimal SDK capabilities" as permission to skip `generator-workbench`
+- treating `generator-workbench` as a later enhancement instead of the default full-mode host path for new generators
+- treating user silence as permission to skip the official host shell
+- treating missing MCP as permission to build a custom full shell
+- building a demo shell first and planning to replace it with `generator-workbench` later
+- adding shell-level login/export/Studio actions outside `generator-workbench` without an explicit waiver
+- using `generate_code` as the main skeleton path for a new generator instead of `generate_runtime_starter`
 - generating only `full` and forgetting `embed`
 - missing `getPanelSchema()`
 - hardcoding the panel so the host cannot filter fields

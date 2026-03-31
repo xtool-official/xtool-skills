@@ -22,6 +22,18 @@
 | history | `history` |
 | template-authoring capability | `template` |
 
+## Default Workbench Standard Bundle
+
+For a new generator in initial development, the default feature bundle is:
+
+- `auth`
+- `credits`
+- `billing`
+- `export`
+- `template`
+
+Use this bundle unless the user explicitly asks for a reduced-scope build or explicitly requires extra platform capabilities such as `cloud` or `history`.
+
 ## `appKey` Rules
 
 - new generators default to a generated development `appKey`
@@ -48,11 +60,19 @@ GeneratorSDK.init({
 
 For old-generator refactors, treat a starter as a structural reference rather than a full overwrite plan.
 
-For new generators, the recommended shell path is:
+For new generators, the default shell path is:
 
 - starter generates runtime structure
-- host page mounts `generator-workbench`
+- the full-mode host mounts `generator-workbench`
 - generator-specific code stays in runtime and rendering modules
+- new generators default to `html` + `starter-html-runtime` unless the user explicitly requests Vue
+- new generators default to the `workbench-standard` feature bundle unless the user explicitly requests a reduced-scope or expanded platform bundle
+
+For a new generator in initial development, the official host shell is mandatory by default.
+
+Do not replace `generator-workbench` with a custom full-page shell unless the user explicitly waives the official host shell.
+
+Only skip this path when the user explicitly requests a reduced-scope build, a custom shell, or a runtime-only delivery.
 
 ## Standard Runtime Interface
 
@@ -105,6 +125,10 @@ src/
   platform/
     sdk.ts
 ```
+
+For a new generator in initial development, `pages/full.ts` should host `generator-workbench` rather than a custom full-page shell, unless the user explicitly waives the official host shell.
+
+`generate_code` is not the primary skeleton path for a new generator in initial development. Prefer `generate_runtime_starter` for the first implementation pass, and use `generate_code` only for reduced-scope snippets or `sdk-only` examples.
 
 For progressive refactors, the directory does not need to change immediately, but responsibilities should gradually separate into:
 
