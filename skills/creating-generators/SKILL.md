@@ -59,6 +59,15 @@ The AI must not build a custom full-page shell unless the user explicitly opts o
 
 Missing MCP, starter code, or examples is not a waiver for skipping `generator-workbench`.
 
+For the default `html` path:
+
+- `index.html` is the main entry for `full`
+- `embed.html` is the entry for `embed`
+- do not introduce `full.html` as a separate default entry unless the user explicitly requests it
+- do not turn the generator business into a Vue project by default
+- if Vue is needed on the default `html` path, load it by CDN instead of switching to a Vue-project scaffold
+- keep `appKey` in a top-level `config.json` instead of hardcoding it into business modules
+
 If the task involves templates, template pages, sub-generators, preset parameters, publish/import template, or partial-parameter editing, template capability must use a unified template protocol instead of generator-private JSON.
 
 ## Default Workflow
@@ -71,11 +80,12 @@ Ask only one question at a time. Use this single workflow as the authority for e
 4. if this is a new generator in initial development, lock `full` mode to `generator-workbench` by default
 5. only unlock that decision if the user explicitly says not to use the official host shell, or explicitly requests a reduced-scope build, a custom shell, or a runtime-only delivery
 6. for a new generator, prefer the standard default path instead of asking configuration questions too early
-7. only ask follow-up questions when the user explicitly requests a non-default path, a reduced scope, a custom shell, Vue, or extra platform capabilities outside the default bundle
-8. implement the generator runtime with starter + `generator-sdk` + runtime + `PanelSchema`
-9. for new generators, keep the `generator-workbench` path even when MCP is missing, and use the template protocol when needed
-10. treat `generate_code` as a reduced-scope helper rather than the main new-generator path
-11. apply the completion gate and wrap up with the required status fields
+7. on the default `html` path, use `index.html` for `full`, `embed.html` for `embed`, keep `config.json` at the project root, and do not add `full.html`
+8. only ask follow-up questions when the user explicitly requests a non-default path, a reduced scope, a custom shell, a real Vue project scaffold, or extra platform capabilities outside the default bundle
+9. implement the generator runtime with starter + `generator-sdk` + runtime + `PanelSchema`
+10. for new generators, keep the `generator-workbench` path even when MCP is missing, and use the template protocol when needed
+11. treat `generate_code` as a reduced-scope helper rather than the main new-generator path
+12. apply the completion gate and wrap up with the required status fields
 
 ## MCP Bootstrap
 
@@ -159,14 +169,18 @@ Use the following defaults unless the user explicitly asks otherwise:
 - starter: `starter-html-runtime`
 - official host shell: `generator-workbench`
 - feature bundle: `auth`, `credits`, `billing`, `export`, `template`
-- app key: auto-generate `dev_<random>`
+- full entry: `index.html`
+- embed entry: `embed.html`
+- `full.html`: unused by default unless the user explicitly requests it
+- app key config: top-level `config.json`
 - runtime scope: `full` + `embed`
 - runtime interfaces: `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, `export`, and `subscribe`
 - browser runtime exposure: `window.__GENERATOR_RUNTIME__`
+- Vue usage on the default `html` path: CDN only, not a Vue-project scaffold
 
 Ask follow-up questions only when at least one of the following is true:
 
-1. the user explicitly requests `vue`
+1. the user explicitly requests a real `vue` project scaffold instead of the default `html` path
 2. the user explicitly requests a reduced-scope build
 3. the user explicitly requests a custom shell or runtime-only delivery
 4. the user explicitly requests extra platform capabilities such as `cloud` or `history`
@@ -174,20 +188,25 @@ Ask follow-up questions only when at least one of the following is true:
 
 Default behavior:
 
-- auto-generate a development `appKey` in the form `dev_<random>`
 - prefer `starter-html-runtime`
+- use `index.html` as the `full` entry
+- use `embed.html` as the `embed` entry
+- do not add `full.html` unless the user explicitly asks for it
+- keep `config.json` at the outermost directory and read `appKey` from it
 - enable both `full` and `embed`
 - expose `window.__GENERATOR_RUNTIME__`
 - provide `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, `export`, and `subscribe`
 - for new generators, default `full` mode to a host page that mounts `generator-workbench`
 - keep `embed` mode as pure runtime rendering without shell-level platform UI
 - enable the `workbench-standard` feature bundle: `auth`, `credits`, `billing`, `export`, `template`
+- keep the default `html` path as a plain HTML runtime project; if Vue is used there, load it via CDN instead of turning the project into a Vue scaffold
 - only skip `generator-workbench` when the user explicitly waives the official host shell by asking for a reduced-scope build, a custom shell, or a runtime-only delivery
 
 Default recommendations:
 
 - default new-generator path -> `html` + `starter-html-runtime`
-- explicit Vue request -> `vue` + `starter-vue-runtime`
+- Vue-dependent UI on the default path -> keep `html` + load Vue by CDN
+- explicit request for a dedicated Vue-project scaffold -> `vue` + `starter-vue-runtime`
 - default SDK bundle -> `auth`, `credits`, `billing`, `export`, `template`
 - explicit extra platform capabilities -> add `cloud` and/or `history`
 
@@ -239,7 +258,11 @@ These are hard constraints, not just defaults:
 11. template import must take effect through runtime `setState()` / `patchState()` + `panelFilter`
 12. template JSON must use a unified template protocol; do not invent generator-private field names freely
 13. in `embed` mode, do not render top navigation or shell-level platform entries, and do not depend on global `body` layout
-14. before the completion gate is satisfied, do not claim "completed to the full standard"
+14. on the default `html` path, `index.html` is the full entry and `embed.html` is the embed entry
+15. do not introduce `full.html` as a separate default entry unless the user explicitly requests it
+16. on the default `html` path, do not turn generator business code into a Vue project; use Vue by CDN if needed
+17. keep `appKey` in a top-level `config.json`; do not scatter or hardcode it through business modules
+18. before the completion gate is satisfied, do not claim "completed to the full standard"
 
 ## Completion Gate
 
@@ -294,10 +317,13 @@ If `Can standardization be claimed = no`, explicitly say that the result has not
 Stop immediately and revise the approach if any of the following happens during a new generator initial build without an explicit waiver:
 
 - creating a custom `full` page shell
-- creating a custom `src/index.html` host shell for `full` mode
+- creating a custom `index.html` shell for `full` mode instead of the standard entry that mounts `generator-workbench`
 - adding custom top bars, login buttons, export buttons, or Studio buttons in the shell
 - treating `generator-workbench` as a later enhancement
 - using "start simple first" or "just a demo first" as justification
+- introducing `full.html` as another default full entry
+- converting the default `html` path into a Vue project instead of using Vue by CDN
+- hardcoding `appKey` in runtime or business modules instead of reading the top-level `config.json`
 
 If any of these occur, discard that shell plan and return to the `generator-workbench` path.
 
@@ -309,6 +335,8 @@ If any of these occur, discard that shell plan and return to the `generator-work
 - stopping the task because MCP is unavailable instead of using documentation fallback
 - asking new-generator users for `appKey`, framework, SDK features, or template support before applying the standard default path
 - creating a custom full-page shell for a new generator instead of mounting `generator-workbench`
+- forgetting that `index.html` is the default `full` entry and `embed.html` is the default `embed` entry
+- adding `full.html` by default even though the user did not ask for it
 - treating "minimal SDK capabilities" as permission to skip `generator-workbench`
 - treating `generator-workbench` as a later enhancement instead of the default full-mode host path for new generators
 - treating user silence as permission to skip the official host shell
@@ -321,7 +349,8 @@ If any of these occur, discard that shell plan and return to the `generator-work
 - hardcoding the panel so the host cannot filter fields
 - rendering navigation or platform buttons in `embed`
 - rewriting an old generator before checking compatibility constraints
-- deriving the development `appKey` from the generator name instead of using `dev_<random>`
+- turning the default `html` path into a Vue project instead of keeping it HTML-first and loading Vue via CDN when needed
+- hardcoding `appKey` in source code instead of reading the outermost `config.json`
 - inventing private template JSON instead of using a unified template protocol
 - saying Stage 1/2 or reduced-scope delivery already equals standardization completion
 

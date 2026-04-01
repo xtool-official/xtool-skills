@@ -36,17 +36,24 @@ Use this bundle unless the user explicitly asks for a reduced-scope build or exp
 
 ## `appKey` Rules
 
-- new generators default to a generated development `appKey`
-- use the format `dev_<random>`
-- write it into `GeneratorSDK.init({ appKey, env: 'prod' })`
-- do not derive the value from the generator name
+- keep `appKey` in a top-level `config.json`
+- do not hardcode `appKey` inside runtime or business modules
+- load `appKey` from `config.json` before initializing `GeneratorSDK`
 - old-generator refactors should reuse the production `appKey` by default unless the user wants to change it
 
 Example:
 
+```json
+{
+  "appKey": "dev_xxx"
+}
+```
+
 ```ts
+import config from '../config.json'
+
 GeneratorSDK.init({
-  appKey: 'dev_xxx',
+  appKey: config.appKey,
   env: 'prod',
 })
 ```
@@ -55,8 +62,8 @@ GeneratorSDK.init({
 
 | Scenario | Default Starter |
 |---|---|
-| pure HTML / CDN / rapid vibe coding | `starter-html-runtime` |
-| Vue 3 engineered generator | `starter-vue-runtime` |
+| default HTML path / CDN / rapid vibe coding | `starter-html-runtime` |
+| explicit dedicated Vue-project scaffold | `starter-vue-runtime` |
 
 For old-generator refactors, treat a starter as a structural reference rather than a full overwrite plan.
 
@@ -65,7 +72,10 @@ For new generators, the default shell path is:
 - starter generates runtime structure
 - the full-mode host mounts `generator-workbench`
 - generator-specific code stays in runtime and rendering modules
-- new generators default to `html` + `starter-html-runtime` unless the user explicitly requests Vue
+- new generators default to `html` + `starter-html-runtime`
+- on the default `html` path, `index.html` is the `full` entry and `embed.html` is the `embed` entry
+- `full.html` is not used by default; only add it when the user explicitly asks for it
+- on the default `html` path, keep the project HTML-first; if Vue is needed, load it by CDN rather than converting the project into a Vue scaffold
 - new generators default to the `workbench-standard` feature bundle unless the user explicitly requests a reduced-scope or expanded platform bundle
 
 For a new generator in initial development, the official host shell is mandatory by default.
@@ -109,6 +119,9 @@ interface GeneratorRuntime {
 ## Minimum Directory Skeleton
 
 ```txt
+config.json
+index.html
+embed.html
 src/
   core/
     state.ts
@@ -120,13 +133,17 @@ src/
     mount-canvas.ts
     mount-panel.ts
   pages/
-    full.ts
+    index.ts
     embed.ts
   platform/
     sdk.ts
 ```
 
-For a new generator in initial development, `pages/full.ts` should host `generator-workbench` rather than a custom full-page shell, unless the user explicitly waives the official host shell.
+For a new generator in initial development, `index.html` is the main `full` entry and should mount `generator-workbench` through the standard host path rather than a custom full-page shell, unless the user explicitly waives the official host shell.
+
+`embed.html` is the standard `embed` entry.
+
+Do not add `full.html` as another default entry unless the user explicitly requests it.
 
 `generate_code` is not the primary skeleton path for a new generator in initial development. Prefer `generate_runtime_starter` for the first implementation pass, and use `generate_code` only for reduced-scope snippets or `sdk-only` examples.
 
