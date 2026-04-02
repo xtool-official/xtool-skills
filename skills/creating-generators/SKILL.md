@@ -50,7 +50,7 @@ There are two capability layers:
 For new generators, default to the standard shell path:
 
 - the runtime starter provides the generator runtime structure
-- the full-mode host mounts `generator-workbench`
+- the full entry mounts `generator-workbench`, and the default host shell should use `mode: 'shell'` unless the user explicitly wants the classic split sidebar layout
 - generator-specific business logic stays inside runtime, rendering, and panel-schema modules
 
 For a new generator in initial development, `generator-workbench` is mandatory for `full` mode by default.
@@ -66,6 +66,9 @@ For the default `html` path:
 - do not introduce `full.html` as a separate default entry unless the user explicitly requests it
 - do not turn the generator business into a Vue project by default
 - if Vue is needed on the default `html` path, load it by CDN instead of switching to a Vue-project scaffold
+- once `generator-workbench` is used on the default `html` path, default generator business UI to `atomm-ui`
+- on that default path, load `atomm-ui` by CDN instead of switching to another component library or a package-managed UI stack unless the user explicitly asks for it
+- once runtime business UI uses `atomm-ui` under `generator-workbench`, make sure the styles are available in the actual runtime mount root; page-level `<head>` CSS alone is not sufficient when the runtime is mounted into a Shadow Root or another isolated root
 - keep `appKey` in a top-level `config.json` instead of hardcoding it into business modules
 
 If the task involves templates, template pages, sub-generators, preset parameters, publish/import template, or partial-parameter editing, template capability must use a unified template protocol instead of generator-private JSON.
@@ -80,12 +83,15 @@ Ask only one question at a time. Use this single workflow as the authority for e
 4. if this is a new generator in initial development, lock `full` mode to `generator-workbench` by default
 5. only unlock that decision if the user explicitly says not to use the official host shell, or explicitly requests a reduced-scope build, a custom shell, or a runtime-only delivery
 6. for a new generator, prefer the standard default path instead of asking configuration questions too early
-7. on the default `html` path, use `index.html` for `full`, `embed.html` for `embed`, keep `config.json` at the project root, and do not add `full.html`
-8. only ask follow-up questions when the user explicitly requests a non-default path, a reduced scope, a custom shell, a real Vue project scaffold, or extra platform capabilities outside the default bundle
-9. implement the generator runtime with starter + `generator-sdk` + runtime + `PanelSchema`
-10. for new generators, keep the `generator-workbench` path even when MCP is missing, and use the template protocol when needed
-11. treat `generate_code` as a reduced-scope helper rather than the main new-generator path
-12. apply the completion gate and wrap up with the required status fields
+7. on that default path, prefer `generator-workbench` `shell` mode so the runtime owns the full workspace area
+8. on the default `html` path, use `index.html` for `full`, `embed.html` for `embed`, keep `config.json` at the project root, and do not add `full.html`
+9. once `generator-workbench` is chosen on the default `html` path, default generator business UI to `atomm-ui` by CDN
+10. when runtime business UI uses `atomm-ui` under `generator-workbench`, ensure the styles are injected into the actual runtime mount root instead of assuming page-level `<head>` CSS can cross Shadow DOM boundaries
+11. only ask follow-up questions when the user explicitly requests a non-default path, a reduced scope, a custom shell, a real Vue project scaffold, another UI stack, or extra platform capabilities outside the default bundle
+12. implement the generator runtime with starter + `generator-sdk` + runtime + `PanelSchema`
+13. for new generators, keep the `generator-workbench` path even when MCP is missing, and use the template protocol when needed
+14. treat `generate_code` as a reduced-scope helper rather than the main new-generator path
+15. apply the completion gate and wrap up with the required status fields
 
 ## MCP Bootstrap
 
@@ -167,7 +173,7 @@ Use the following defaults unless the user explicitly asks otherwise:
 - generator type: standard new generator
 - framework: `html`
 - starter: `starter-html-runtime`
-- official host shell: `generator-workbench`
+- official host shell: `generator-workbench` with `mode: 'shell'` by default
 - feature bundle: `auth`, `credits`, `billing`, `export`, `template`
 - full entry: `index.html`
 - embed entry: `embed.html`
@@ -177,6 +183,8 @@ Use the following defaults unless the user explicitly asks otherwise:
 - runtime interfaces: `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, `export`, and `subscribe`
 - browser runtime exposure: `window.__GENERATOR_RUNTIME__`
 - Vue usage on the default `html` path: CDN only, not a Vue-project scaffold
+- business UI library after `generator-workbench` integration on the default `html` path: `atomm-ui`
+- business UI component delivery on that path: CDN only unless the user explicitly requests another UI stack or an engineered scaffold
 
 Ask follow-up questions only when at least one of the following is true:
 
@@ -196,16 +204,18 @@ Default behavior:
 - enable both `full` and `embed`
 - expose `window.__GENERATOR_RUNTIME__`
 - provide `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, `export`, and `subscribe`
-- for new generators, default `full` mode to a host page that mounts `generator-workbench`
+- for new generators, default the full entry to a host page that mounts `generator-workbench` in `mode: 'shell'`
 - keep `embed` mode as pure runtime rendering without shell-level platform UI
 - enable the `workbench-standard` feature bundle: `auth`, `credits`, `billing`, `export`, `template`
 - keep the default `html` path as a plain HTML runtime project; if Vue is used there, load it via CDN instead of turning the project into a Vue scaffold
+- once `generator-workbench` is integrated on the default `html` path, default business UI to `atomm-ui`, and keep that UI path CDN-based unless the user explicitly asks otherwise
 - only skip `generator-workbench` when the user explicitly waives the official host shell by asking for a reduced-scope build, a custom shell, or a runtime-only delivery
 
 Default recommendations:
 
 - default new-generator path -> `html` + `starter-html-runtime`
 - Vue-dependent UI on the default path -> keep `html` + load Vue by CDN
+- component-library UI on the default path after `generator-workbench` integration -> use `atomm-ui` + CDN
 - explicit request for a dedicated Vue-project scaffold -> `vue` + `starter-vue-runtime`
 - default SDK bundle -> `auth`, `credits`, `billing`, `export`, `template`
 - explicit extra platform capabilities -> add `cloud` and/or `history`
@@ -261,8 +271,11 @@ These are hard constraints, not just defaults:
 14. on the default `html` path, `index.html` is the full entry and `embed.html` is the embed entry
 15. do not introduce `full.html` as a separate default entry unless the user explicitly requests it
 16. on the default `html` path, do not turn generator business code into a Vue project; use Vue by CDN if needed
-17. keep `appKey` in a top-level `config.json`; do not scatter or hardcode it through business modules
-18. before the completion gate is satisfied, do not claim "completed to the full standard"
+17. once `generator-workbench` is integrated on the default `html` path, default generator business UI to `atomm-ui`; do not silently switch to another component library or a package-managed UI stack
+18. keep `atomm-ui` on that default path CDN-based unless the user explicitly requests another delivery mode or an engineered scaffold
+19. keep `appKey` in a top-level `config.json`; do not scatter or hardcode it through business modules
+20. before the completion gate is satisfied, do not claim "completed to the full standard"
+21. when `generator-workbench` is used and runtime business UI depends on `atomm-ui`, the implementation must ensure `atomm-ui` styles are available in the actual runtime mount root; page-level CDN CSS alone is not sufficient when runtime mounts into Shadow DOM or another isolated root
 
 ## Completion Gate
 
@@ -281,6 +294,7 @@ Do not claim any of the following unless this gate is satisfied:
 - `window.__GENERATOR_RUNTIME__` is exposed
 - `getPanelSchema()` is provided and can be filtered by the host
 - if templates are involved, a unified template protocol is integrated
+- when runtime business UI uses `atomm-ui`, `full` mode under `generator-workbench` is verified for actual runtime component styles, not just shell styles
 - compatibility, migration, or CMS-related notes are included
 
 If `generator-workbench` is not used for a new generator in initial development, the final wrap-up must include the explicit user waiver. Otherwise, standardization cannot be claimed.
@@ -323,6 +337,7 @@ Stop immediately and revise the approach if any of the following happens during 
 - using "start simple first" or "just a demo first" as justification
 - introducing `full.html` as another default full entry
 - converting the default `html` path into a Vue project instead of using Vue by CDN
+- switching the default `html` + `generator-workbench` path to another component library or package-managed UI stack instead of keeping `atomm-ui` + CDN
 - hardcoding `appKey` in runtime or business modules instead of reading the top-level `config.json`
 
 If any of these occur, discard that shell plan and return to the `generator-workbench` path.
@@ -348,6 +363,10 @@ If any of these occur, discard that shell plan and return to the `generator-work
 - missing `getPanelSchema()`
 - hardcoding the panel so the host cannot filter fields
 - rendering navigation or platform buttons in `embed`
+- after integrating `generator-workbench` on the default `html` path, still generating business UI with another component library or local package-managed UI stack instead of `atomm-ui` + CDN
+- assuming that loading `atomm-ui` CSS in `index.html` automatically styles runtime business UI inside `generator-workbench`
+- forgetting that `generator-workbench` may mount runtime panel or canvas into a Shadow Root or another isolated style root
+- generating runtime business UI with `atomm-ui` components but without a runtime-side style injection strategy
 - rewriting an old generator before checking compatibility constraints
 - turning the default `html` path into a Vue project instead of keeping it HTML-first and loading Vue via CDN when needed
 - hardcoding `appKey` in source code instead of reading the outermost `config.json`
