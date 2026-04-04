@@ -158,6 +158,61 @@ interface GeneratorRuntime {
 | `getExportData()` | `export()` |
 | `_sync()` | `subscribe()` + `state-change` |
 
+## Workbench Upgrade Audit
+
+When an old generator already uses `generator-workbench`, do not treat a shell upgrade as "CDN only" by default.
+
+Use `https://static-res.atomm.com/scripts/js/generator-sdk/generator-workbench/upgrade-manifest.json` as the primary source of truth for upgrade requirements.
+
+If the CDN manifest cannot be read, fall back to MCP upgrade documentation instead of assuming the capability is shell-only.
+
+### Required Audit Flow
+
+1. identify the generator's current workbench integration shape
+2. read the target release entry from the CDN manifest URL above
+3. classify each relevant capability into:
+   - `auto-adopted`
+   - `host-action-required`
+   - `runtime-action-required`
+4. compare the target generator against the manifest's `detectionHints`, `requiredChanges`, and `validation`
+5. output a generator-specific upgrade checklist before implementation
+
+### Interpretation Rules
+
+- `auto-adopted` means a CDN shell update is usually enough
+- `host-action-required` means the generator must update host glue code, config, routes, or CDN asset wiring
+- `runtime-action-required` means the generator must update runtime contract behavior, runtime adapter logic, or runtime events
+
+### Typical Workbench Upgrade Gaps
+
+The most common old-generator upgrade misses are:
+
+- enabling a new shell capability in config but not exposing the required host helpers
+- updating the workbench CDN URL without updating `workbench-host.js`
+- adding cloud/history in the shell while the runtime cannot provide stable `getState()` before mount
+- enabling autosave without emitting observable runtime state changes
+- failing to dispatch `runtime-cloud-save-request` for runtime-owned save payloads
+- enabling invite or purchase flows without wiring the required `atomm-pro` config or CDN assets
+
+### Minimum Upgrade Checklist Output
+
+For an old-generator workbench upgrade, the skill should output a checklist that includes:
+
+- current generator workbench version or integration assumption
+- target workbench version
+- capabilities that are automatically gained
+- host-side changes still required
+- runtime-side changes still required
+- smoke tests to rerun
+
+### Example Questions The Audit Should Answer
+
+- Does this generator really gain the new capability automatically after the CDN update?
+- Does the host need new `workbench.config` fields?
+- Does the runtime need `subscribe()` or `runtime-cloud-save-request`?
+- Are route bootstrap behaviors such as `gid` creation now required?
+- Are new CDN assets required for shell-owned UI such as `atomm-pro` flows?
+
 ## Minimum Directory Skeleton
 
 ```txt

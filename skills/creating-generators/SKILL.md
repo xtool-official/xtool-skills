@@ -235,12 +235,46 @@ For an old generator, ask the minimum required questions in this order:
 7. whether templates or old template data are involved
 8. whether staged delivery is allowed
 
+### Workbench Upgrade Audit Rule
+
+When the task involves an old generator that already uses `generator-workbench`, and the request is about:
+
+- adopting a newer `generator-workbench` version
+- enabling a capability newly added to `generator-workbench`
+- debugging why a CDN-updated generator did not fully gain a new workbench capability
+
+you must treat this as a **workbench upgrade audit** before proposing implementation.
+
+In that case, do this in order:
+
+1. read `https://static-res.atomm.com/scripts/js/generator-sdk/generator-workbench/upgrade-manifest.json`
+2. if the CDN manifest cannot be read, use MCP documentation as the fallback source for upgrade rules
+3. identify the relevant release window, such as `0.1.5 -> 0.1.6`
+4. classify the target capability into:
+   - `auto-adopted`
+   - `host-action-required`
+   - `runtime-action-required`
+5. scan the target generator for the required host/runtime markers
+6. output a generator-specific upgrade checklist before implementation
+
+Do not assume that updating the CDN URL means the generator has fully adopted the capability.
+
+If the manifest says the capability is `host-action-required` or `runtime-action-required`, the generator must update its own host glue code, runtime adapter, config, or tests.
+
+The upgrade checklist must explicitly state:
+
+- what the shell update gives automatically
+- what the generator host must still add
+- what the runtime must still implement
+- what smoke tests must be re-run
+
 Default recommendations:
 
 - prefer progressive refactoring over complete rewrite
 - keep the existing `appKey`, parameter semantics, and export behavior stable unless the user asks to change them
 - reuse old rendering and state logic if possible
 - keep old entry points, old bridge, and old template data compatible unless the user agrees to retire them
+- when the old generator already uses `generator-workbench`, prefer a manifest-driven upgrade audit before changing workbench timing or shell internals
 
 Refactor strategy order:
 
