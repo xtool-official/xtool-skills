@@ -116,8 +116,8 @@ Recommended CDN addresses for the default path:
 
 ```html
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<link rel="stylesheet" href="https://minio-download.makeblock.com/resource/atomm-ui-umd/dist-browser/atomm-ui.min.css" />
-<script src="https://minio-download.makeblock.com/resource/atomm-ui-umd/dist-browser/atomm-ui.js"></script>
+<link rel="stylesheet" href="https://static-res.atomm.com/scripts/js/generator-sdk/atomm-ui/dist-browser/atomm-ui.min.css" />
+<script src="https://static-res.atomm.com/scripts/js/generator-sdk/atomm-ui/dist-browser/atomm-ui.js"></script>
 ```
 
 Only deviate from this default when the user explicitly asks for:
