@@ -1,5 +1,8 @@
 # Creating Generators Reference
 
+> `SKILL.md` is the authority. This file adds implementation detail and examples.
+> If this file conflicts with `SKILL.md`, follow `SKILL.md`.
+
 ## Runtime And Platform Capability Layers
 
 | Layer | Responsible For | Not Responsible For |
@@ -30,9 +33,10 @@ For a new generator in initial development, the default feature bundle is:
 - `credits`
 - `billing`
 - `export`
-- `template`
 
-Use this bundle unless the user explicitly asks for a reduced-scope build or explicitly requires extra platform capabilities such as `cloud` or `history`.
+Only add `cloud` / `history` when the request explicitly needs cloud drafts or history flows.
+
+Only add `template` when the request explicitly needs publish-template, template-page embedding, customize flow, template import/export, sub-generators, preset parameters, or partial-parameter editing.
 
 ## `appKey` Rules
 
@@ -73,18 +77,50 @@ For new generators, the default shell path is:
 - the full entry mounts `generator-workbench`, and new generators should default that host shell to `mode: 'shell'` unless the user explicitly wants the classic split sidebar layout
 - generator-specific code stays in runtime and rendering modules
 - new generators default to `html` + `starter-html-runtime`
-- on the default `html` path, `index.html` is the `full` entry and `embed.html` is the `embed` entry
+- on the default `html` path, `index.html` is the main entry; use the same workbench host with `?mode=embed` by default when an embed route is needed
+- only add a dedicated `embed.html` when the host architecture explicitly requires a dedicated embed entry
 - `full.html` is not used by default; only add it when the user explicitly asks for it
 - on the default `html` path, keep the project HTML-first; if Vue is needed, load it by CDN rather than converting the project into a Vue scaffold
 - once `generator-workbench` is integrated on the default `html` path, business UI should default to `atomm-ui`
 - on that default path, keep the business UI CDN-based instead of switching to another component library or a package-managed UI stack unless the user explicitly asks for it
-- new generators default to the `workbench-standard` feature bundle unless the user explicitly requests a reduced-scope or expanded platform bundle
+- new generators default to the standard feature bundle: `auth`, `credits`, `billing`, `export`
 
 For a new generator in initial development, the official host shell is mandatory by default.
 
 Do not replace `generator-workbench` with a custom full-page shell unless the user explicitly waives the official host shell.
 
 Only skip this path when the user explicitly requests a reduced-scope build, a custom shell, or a runtime-only delivery.
+
+## Workbench Host Initialization Pattern
+
+Use the documented `generator-workbench` custom-element flow instead of inventing a private host bootstrap API:
+
+```html
+<generator-workbench id="workbench"></generator-workbench>
+<script type="module">
+  import { defineGeneratorWorkbench } from '@atomm-developer/generator-workbench'
+
+  defineGeneratorWorkbench()
+
+  const workbench = document.querySelector('#workbench')
+
+  workbench.sdk = sdk
+  workbench.runtime = runtime
+  workbench.config = {
+    title: 'Frame Generator',
+    mode: 'shell',
+  }
+
+  await workbench.mount()
+</script>
+```
+
+Mode guidance:
+
+- default new-generator shell path: `mode: 'shell'`
+- classic split workspace layout only when explicitly requested: `mode: 'full'`
+- template-authoring pages: `mode: 'template'`
+- `?mode=embed` is a route-capability mode, not a mandatory separate `embed.html` file
 
 ## Default Business UI Stack After Workbench Integration
 
@@ -218,7 +254,7 @@ For an old-generator workbench upgrade, the skill should output a checklist that
 ```txt
 config.json
 index.html
-embed.html
+[embed.html]
 src/
   core/
     state.ts
@@ -231,14 +267,14 @@ src/
     mount-panel.ts
   pages/
     index.ts
-    embed.ts
+    [embed.ts]
   platform/
     sdk.ts
 ```
 
 For a new generator in initial development, `index.html` is the main `full` entry and should mount `generator-workbench` through the standard host path, defaulting to `mode: 'shell'` so the runtime owns the full workspace layout unless the user explicitly wants the classic split sidebar shell or waives the official host shell.
 
-`embed.html` is the standard `embed` entry.
+`embed.html` is **not** a default required file. Add it only when the host architecture explicitly requires a dedicated embed URL or entry file. When that file is not needed, use the same workbench host with `?mode=embed`.
 
 Do not add `full.html` as another default entry unless the user explicitly requests it.
 
@@ -248,7 +284,7 @@ For progressive refactors, the directory does not need to change immediately, bu
 
 - `core`: state, rendering, export, parameter schema
 - `runtime`: standard interfaces and adapter layer
-- `pages`: `full` / `embed` entries
+- `pages`: main entry logic plus an optional dedicated `embed` entry when the architecture requires it
 - `platform`: `generator-sdk` integration
 
 ## `PanelFilter` Example

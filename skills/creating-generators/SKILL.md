@@ -1,6 +1,6 @@
 ---
 name: creating-generators
-description: Use when a request is about building or refactoring a generator with generator-sdk, runtime/full/embed, PanelSchema, template pages, or old-generator standardization.
+description: Use when a request is about building or refactoring a generator with generator-sdk, runtime contexts such as full/embed under generator-workbench, PanelSchema, template pages, or old-generator standardization.
 ---
 
 # Creating Generators
@@ -13,7 +13,7 @@ Use this skill when the request is clearly about a generator rather than a norma
 
 - the user explicitly says `generator`, `build a generator`, `create a generator`
 - generator types such as `house generator`, `frame generator`, `pendant generator`, `nameplate generator`
-- the user mentions `generator-sdk`, `runtime contract`, `PanelSchema`, `full/embed`, template page embedding, or old generator standardization
+- the user mentions `generator-sdk`, `runtime contract`, `PanelSchema`, `full/embed` context, template page embedding, or old generator standardization
 - the task is to add generator platform capabilities such as login, SVG export, Open in Studio, credits, billing, cloud save, or history
 
 ### Weak Triggers
@@ -26,7 +26,7 @@ Use this skill when the request is clearly about a generator rather than a norma
 
 If only weak triggers appear, ask one clarifying question first:
 
-`Does this need generator-sdk, runtime/full/embed, template page embedding, or old generator standardization?`
+`Is this a parameter-driven generator or customization tool that needs to run inside the generator platform shell, with capabilities such as login, billing, credits, export, full/embed runtime contexts, template-page embedding, or old-generator standardization?`
 
 If the answer is no, do not use this skill.
 
@@ -45,25 +45,34 @@ The goal is not "build a page first". The default goal is "build or evolve a gen
 There are two capability layers:
 
 - `generator-sdk` handles platform capabilities
-- `Generator Runtime Contract` handles `full/embed`, state, panel schema, export, and host integration
+- `Generator Runtime Contract` handles state, panel schema, export, and host integration across `full` / `embed` contexts
 
 For new generators, default to the standard shell path:
 
 - the runtime starter provides the generator runtime structure
-- the full entry mounts `generator-workbench`, and the default host shell should use `mode: 'shell'` unless the user explicitly wants the classic split sidebar layout
+- `generator-workbench` provides the default `full` host context, and the default host shell should use `mode: 'shell'` unless the user explicitly wants the classic split sidebar layout
+- `generator-workbench` route `?mode=embed` provides the default `embed` host context when embedding is needed
 - generator-specific business logic stays inside runtime, rendering, and panel-schema modules
 
-For a new generator in initial development, `generator-workbench` is mandatory for `full` mode by default.
+For a new generator in initial development, `generator-workbench` is mandatory for the default `full` context.
 
 The AI must not build a custom full-page shell unless the user explicitly opts out of the official host shell.
 
 Missing MCP, starter code, or examples is not a waiver for skipping `generator-workbench`.
 
+`full/embed` in this skill means runtime host contexts, not mandatory separate HTML entry files.
+
+When `generator-workbench` is used, the default expectation is:
+
+- `full` context: the workbench shows shell-owned chrome such as top bar / export / publish actions according to the chosen capability profile
+- `embed` context: the workbench route uses `?mode=embed`, hides shell-owned chrome, and keeps bridge-compatible behavior for the host page
+- runtime code must adapt to these contexts, but does not need to re-implement shell UI
+
 For the default `html` path:
 
-- `index.html` is the main entry for `full`
-- `embed.html` is the entry for `embed`
-- do not introduce `full.html` as a separate default entry unless the user explicitly requests it
+- do not require separate `full` / `embed` HTML entry files unless the host architecture explicitly needs them
+- do not introduce `full.html` as a default concept
+- if the project needs a dedicated embed page, treat that as an explicit entry strategy choice rather than the default standard
 - do not turn the generator business into a Vue project by default
 - if Vue is needed on the default `html` path, load it by CDN instead of switching to a Vue-project scaffold
 - once `generator-workbench` is used on the default `html` path, default generator business UI to `atomm-ui`
@@ -73,6 +82,14 @@ For the default `html` path:
 
 If the task involves templates, template pages, sub-generators, preset parameters, publish/import template, or partial-parameter editing, template capability must use a unified template protocol instead of generator-private JSON.
 
+When the task specifically involves `generator-workbench`, determine the capability profile before assuming template capability:
+
+- `workbench-basic`: shell capabilities only; login / export / Studio / credits / billing, but no cloud save, history, template publishing, or customize flow
+- `workbench-cloud`: `workbench-basic` plus cloud save / restore and history, but still no template publishing or customize flow
+- `workbench-template`: publish as template, template page embedding, customize flow, template import/export, sub-generators, preset parameters, or partial-parameter editing
+
+Using `generator-workbench` does **not** by itself require template protocol. Only turn on template-authoring capability when the request explicitly needs publish-template, template-page embed, customize, template import/export, or a similar flow.
+
 ## Default Workflow
 
 Ask only one question at a time. Use this single workflow as the authority for execution:
@@ -80,18 +97,23 @@ Ask only one question at a time. Use this single workflow as the authority for e
 1. confirm this is really a generator task
 2. bootstrap `generator-sdk-mcp`
 3. determine task framing: new build / compatibility refactor / standardization refactor / reduced-scope task
-4. if this is a new generator in initial development, lock `full` mode to `generator-workbench` by default
-5. only unlock that decision if the user explicitly says not to use the official host shell, or explicitly requests a reduced-scope build, a custom shell, or a runtime-only delivery
-6. for a new generator, prefer the standard default path instead of asking configuration questions too early
-7. on that default path, prefer `generator-workbench` `shell` mode so the runtime owns the full workspace area
-8. on the default `html` path, use `index.html` for `full`, `embed.html` for `embed`, keep `config.json` at the project root, and do not add `full.html`
-9. once `generator-workbench` is chosen on the default `html` path, default generator business UI to `atomm-ui` by CDN
-10. when runtime business UI uses `atomm-ui` under `generator-workbench`, ensure the styles are injected into the actual runtime mount root instead of assuming page-level `<head>` CSS can cross Shadow DOM boundaries
-11. only ask follow-up questions when the user explicitly requests a non-default path, a reduced scope, a custom shell, a real Vue project scaffold, another UI stack, or extra platform capabilities outside the default bundle
-12. implement the generator runtime with starter + `generator-sdk` + runtime + `PanelSchema`
-13. for new generators, keep the `generator-workbench` path even when MCP is missing, and use the template protocol when needed
-14. treat `generate_code` as a reduced-scope helper rather than the main new-generator path
-15. apply the completion gate and wrap up with the required status fields
+4. if this is a compatibility refactor / standardization refactor / reduced-scope task, enter the Refactor Branch question sequence before implementation
+5. if that refactor already uses `generator-workbench`, and the request is about adopting a newer workbench version or enabling a newer workbench capability, run the Workbench Upgrade Audit before implementation
+6. if a refactor involves `generator-workbench`, determine the capability profile first: `workbench-basic` / `workbench-cloud` / `workbench-template`
+7. if this is a new generator in initial development, default the capability profile to `workbench-basic`; only switch to `workbench-cloud` when cloud/history are explicitly needed, and to `workbench-template` when template-authoring flows are explicitly needed
+8. if this is a new generator in initial development, lock the default `full` context to `generator-workbench`
+9. only unlock that decision if the user explicitly says not to use the official host shell, or explicitly requests a reduced-scope build, a custom shell, or a runtime-only delivery
+10. for a new generator, prefer the standard default path instead of asking configuration questions too early
+11. on that default path, prefer `generator-workbench` `shell` mode so the runtime owns the full workspace area
+12. treat `full/embed` as runtime host contexts first; only discuss separate entry files when the host architecture explicitly requires them
+13. once `generator-workbench` is chosen on the default `html` path, default generator business UI to `atomm-ui` by CDN
+14. when runtime business UI uses `atomm-ui` under `generator-workbench`, ensure the styles are injected into the actual runtime mount root instead of assuming page-level `<head>` CSS can cross Shadow DOM boundaries
+15. only ask follow-up questions when the user explicitly requests a non-default path, a reduced scope, a custom shell, a real Vue project scaffold, another UI stack, extra platform capabilities outside the default bundle, a dedicated embed entry strategy, or the task does not yet clarify whether template publishing / template page embedding / customize flow are required
+16. implement the generator runtime with starter + `generator-sdk` + runtime + `PanelSchema`
+17. for new generators, keep the `generator-workbench` path even when MCP is missing
+18. only enable the `template` feature when the request explicitly needs publish-template, template-page embed, customize, template import/export, sub-generators, preset parameters, or partial-parameter editing
+19. treat `generate_code` as a reduced-scope helper rather than the main new-generator path
+20. apply the completion gate and wrap up with the required status fields
 
 ## MCP Bootstrap
 
@@ -125,7 +147,7 @@ Old-generator work must be framed explicitly before implementation.
 ### Hard Framings
 
 - `compatibility refactor`: keep existing features, interactions, styles, and export behavior stable while adding needed capabilities with minimal change
-- `standardization refactor`: converge to the standard generator shape with `generator-sdk`, complete runtime, `full/embed`, `PanelSchema`, and template protocol when needed
+- `standardization refactor`: converge to the standard generator shape with `generator-sdk`, complete runtime context support for `full/embed`, `PanelSchema`, and template protocol when needed
 
 If the user says "refactor the old generator and integrate generator-sdk" but does not say which framing applies, ask first. Do not silently default to a lightweight bridge wrapper.
 
@@ -146,7 +168,7 @@ For reduced-scope tasks, say explicitly that the result is partial and do not cl
 
 ### Official Host Shell Rule
 
-If the task is a new generator in initial development, `full` mode must use `generator-workbench`.
+If the task is a new generator in initial development, the default `full` context must use `generator-workbench`.
 
 Assume the official host shell is required unless the user explicitly states one of the following:
 
@@ -174,12 +196,13 @@ Use the following defaults unless the user explicitly asks otherwise:
 - framework: `html`
 - starter: `starter-html-runtime`
 - official host shell: `generator-workbench` with `mode: 'shell'` by default
-- feature bundle: `auth`, `credits`, `billing`, `export`, `template`
-- full entry: `index.html`
-- embed entry: `embed.html`
-- `full.html`: unused by default unless the user explicitly requests it
+- default context strategy: `generator-workbench` hosts `full`; `generator-workbench?mode=embed` hosts `embed` when embedding is needed
+- default entry strategy: do not require a separate `embed.html` or `full.html` unless the host architecture explicitly needs it
+- default platform bundle: `auth`, `credits`, `billing`, `export`
+- explicit extra platform capabilities: `cloud`, `history`
+- explicit template capability: `template` only when publish / template page / customize / template import-export is required
 - app key config: top-level `config.json`
-- runtime scope: `full` + `embed`
+- runtime scope: support both `full` context and `embed` context
 - runtime interfaces: `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, `export`, and `subscribe`
 - browser runtime exposure: `window.__GENERATOR_RUNTIME__`
 - Vue usage on the default `html` path: CDN only, not a Vue-project scaffold
@@ -192,21 +215,23 @@ Ask follow-up questions only when at least one of the following is true:
 2. the user explicitly requests a reduced-scope build
 3. the user explicitly requests a custom shell or runtime-only delivery
 4. the user explicitly requests extra platform capabilities such as `cloud` or `history`
-5. the request is actually an old-generator refactor rather than a new build
+5. the request uses `generator-workbench` but does not yet clarify whether template publishing / template page embedding / customize flow are required
+6. the request explicitly requires a dedicated embed page or non-default entry strategy
+7. the request is actually an old-generator refactor rather than a new build
 
 Default behavior:
 
 - prefer `starter-html-runtime`
-- use `index.html` as the `full` entry
-- use `embed.html` as the `embed` entry
-- do not add `full.html` unless the user explicitly asks for it
 - keep `config.json` at the outermost directory and read `appKey` from it
-- enable both `full` and `embed`
+- make the runtime support both `full` context and `embed` context
 - expose `window.__GENERATOR_RUNTIME__`
 - provide `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, `export`, and `subscribe`
-- for new generators, default the full entry to a host page that mounts `generator-workbench` in `mode: 'shell'`
-- keep `embed` mode as pure runtime rendering without shell-level platform UI
-- enable the `workbench-standard` feature bundle: `auth`, `credits`, `billing`, `export`, `template`
+- for new generators, default the host shell to `generator-workbench` in `mode: 'shell'` for `full` context
+- keep `embed` context as workbench-hosted `?mode=embed` by default, with runtime rendering adapted to that context and without shell-level platform UI
+- only add a dedicated `embed` page or another explicit entry file when the embedding architecture truly requires it
+- default the workbench bundle to `auth`, `credits`, `billing`, and `export`
+- only add `cloud` and `history` when the user explicitly needs cloud drafts or history flows
+- only add `template` when the user explicitly needs publish-template, template-page embed/customize, template import/export, sub-generators, preset-parameter templates, or partial-parameter editing
 - keep the default `html` path as a plain HTML runtime project; if Vue is used there, load it via CDN instead of turning the project into a Vue scaffold
 - once `generator-workbench` is integrated on the default `html` path, default business UI to `atomm-ui`, and keep that UI path CDN-based unless the user explicitly asks otherwise
 - only skip `generator-workbench` when the user explicitly waives the official host shell by asking for a reduced-scope build, a custom shell, or a runtime-only delivery
@@ -217,10 +242,13 @@ Default recommendations:
 - Vue-dependent UI on the default path -> keep `html` + load Vue by CDN
 - component-library UI on the default path after `generator-workbench` integration -> use `atomm-ui` + CDN
 - explicit request for a dedicated Vue-project scaffold -> `vue` + `starter-vue-runtime`
-- default SDK bundle -> `auth`, `credits`, `billing`, `export`, `template`
+- default SDK bundle -> `auth`, `credits`, `billing`, `export`
 - explicit extra platform capabilities -> add `cloud` and/or `history`
+- explicit template flow -> add `template`
 
-If templates are part of the request, keep using the default `template` feature, use a unified template protocol, and keep template pages parameter-driven through `panelFilter`.
+If templates are part of the request, keep using the `template` feature, use a unified template protocol, and keep template pages parameter-driven through `panelFilter`.
+
+If templates are **not** part of the request, do not introduce template publishing UI, template JSON protocol work, or customize flow just because `generator-workbench` is used.
 
 ## Refactor Branch
 
@@ -231,9 +259,10 @@ For an old generator, ask the minimum required questions in this order:
 3. whether the existing production `appKey` must be reused
 4. current technical form: `html` / `vue` / monolithic page / bridge / partial runtime
 5. what must remain unchanged
-6. which platform or runtime capabilities must be added
-7. whether templates or old template data are involved
-8. whether staged delivery is allowed
+6. which workbench capability profile applies: `workbench-basic`, `workbench-cloud`, or `workbench-template`
+7. which platform or runtime capabilities must be added
+8. whether publish-template, template pages, customize flow, or old template data are involved
+9. whether staged delivery is allowed
 
 ### Workbench Upgrade Audit Rule
 
@@ -285,15 +314,50 @@ Refactor strategy order:
 
 Do not default to a complete rewrite unless the user explicitly wants to start over.
 
+## Workbench Capability Profiles
+
+When the task involves `generator-workbench`, classify the target into one of these profiles before deciding whether template capability is required:
+
+- `workbench-basic`: login / export / Studio / credits / billing only
+- `workbench-cloud`: `workbench-basic` plus cloud save / restore and history
+- `workbench-template`: publish as template, template page embedding, customize flow, template import/export, sub-generators, preset parameters, or partial-parameter editing
+
+Rules:
+
+1. Using `generator-workbench` does **not** automatically require `workbench-template`
+2. Do not add template publishing UI, template JSON work, or customize flow to a `workbench-basic` or `workbench-cloud` task
+3. Only enable the `template` feature when the user explicitly needs a template flow or the request clearly depends on it
+
+## Old Generator Refactor Stages
+
+Use these stage labels only for old-generator work. They describe refactor progress inside this skill and are separate from the broader repository developer-journey stages.
+
+| Stage | Meaning | Claim This Only When |
+|---|---|---|
+| `Stage 1` | platform baseline connected | `appKey` strategy is confirmed and the required `generator-sdk` capabilities for the current step are wired, but runtime standardization is still incomplete |
+| `Stage 2` | runtime surface exposed | the runtime exposes or clearly wires `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, `export`, `subscribe`, and `window.__GENERATOR_RUNTIME__` |
+| `Stage 3` | host-context alignment verified | the required `full/embed` behavior for this task is working, `PanelSchema`/`PanelFilter` consumption is wired, and the chosen host path or `generator-workbench` profile is verified |
+| `Stage 4` | standardization completion state reached | the Completion Gate in this skill is satisfied, including template protocol and compatibility/migration notes when applicable |
+
+If the delivery is compatibility-only, staged, or otherwise does not map cleanly to one of these stages, use an `equivalent partial state` label instead of inventing a stage number.
+
+Preferred `equivalent partial state` labels:
+
+- `compatibility refactor complete`
+- `sdk-only integration complete`
+- `runtime-only integration complete`
+- `template-only integration complete`
+- `staged delivery in progress`
+
 ## Hard Constraints
 
 These are hard constraints, not just defaults:
 
 1. `generator-sdk` handles platform capabilities, not page shell or embedding protocol
-2. for a new generator in initial development, the default full-mode host must mount `generator-workbench` unless the user explicitly waives the official host shell
+2. for a new generator in initial development, the default `full` host context must mount `generator-workbench` unless the user explicitly waives the official host shell
 3. do not hand-write a custom top bar, template action shell, login entry, or floating export shell for a new generator when `generator-workbench` should be used
 4. if the user has not explicitly waived the official host shell, the AI must not create a custom `full` page shell for a new generator in initial development
-5. if the user has not explicitly waived the official host shell, the AI must not add custom shell-level top bars, login buttons, export buttons, Studio buttons, or floating action shells in `full` mode
+5. if the user has not explicitly waived the official host shell, the AI must not add custom shell-level top bars, login buttons, export buttons, Studio buttons, or floating action shells in the default `full` context
 6. missing MCP, starter code, or examples is not permission to skip `generator-workbench`
 7. for a new generator, any custom full-page shell requires an explicit user waiver that must be quoted in the final wrap-up
 8. a standard generator must expose runtime interfaces instead of only exporting a page
@@ -301,9 +365,9 @@ These are hard constraints, not just defaults:
 10. template pages consume runtime; they do not copy generator-private DOM or private business logic
 11. template import must take effect through runtime `setState()` / `patchState()` + `panelFilter`
 12. template JSON must use a unified template protocol; do not invent generator-private field names freely
-13. in `embed` mode, do not render top navigation or shell-level platform entries, and do not depend on global `body` layout
-14. on the default `html` path, `index.html` is the full entry and `embed.html` is the embed entry
-15. do not introduce `full.html` as a separate default entry unless the user explicitly requests it
+13. in `embed` context, do not render top navigation or shell-level platform entries, and do not depend on global `body` layout
+14. do not equate `full/embed` support with mandatory separate `index.html` / `embed.html` files
+15. do not introduce `full.html` as a default concept; only use extra entry files when the host architecture explicitly requires them
 16. on the default `html` path, do not turn generator business code into a Vue project; use Vue by CDN if needed
 17. once `generator-workbench` is integrated on the default `html` path, default generator business UI to `atomm-ui`; do not silently switch to another component library or a package-managed UI stack
 18. keep `atomm-ui` on that default path CDN-based unless the user explicitly requests another delivery mode or an engineered scaffold
@@ -323,12 +387,12 @@ Do not claim any of the following unless this gate is satisfied:
 
 - the required platform capabilities for this task are integrated through `generator-sdk`
 - the complete `Generator Runtime Contract` is exposed
-- working `full` / `embed` dual entry points are provided, unless the user explicitly waives one
-- for new generators in initial development, the full-mode host uses `generator-workbench`, unless the user explicitly waives the official host shell
+- the runtime correctly supports both `full` context and `embed` context, unless the user explicitly waives one
+- for new generators in initial development, the default `full` host context uses `generator-workbench`, unless the user explicitly waives the official host shell
 - `window.__GENERATOR_RUNTIME__` is exposed
 - `getPanelSchema()` is provided and can be filtered by the host
 - if templates are involved, a unified template protocol is integrated
-- when runtime business UI uses `atomm-ui`, `full` mode under `generator-workbench` is verified for actual runtime component styles, not just shell styles
+- when runtime business UI uses `atomm-ui`, the workbench-hosted `full` context is verified for actual runtime component styles, not just shell styles
 - compatibility, migration, or CMS-related notes are included
 
 If `generator-workbench` is not used for a new generator in initial development, the final wrap-up must include the explicit user waiver. Otherwise, standardization cannot be claimed.
@@ -342,12 +406,36 @@ If the current work is only:
 
 then say so explicitly and also state that standardization has not yet been completed.
 
+## Validation Checklist
+
+When the task touches `generator-workbench`, the final delivery must include the applicable validation checklist.
+
+### `workbench-basic`
+
+- verify that login / export / Studio / credits / billing match the requested scope
+- verify that template publishing UI was not added when not requested
+- verify that cloud/history flows were not added when not requested
+
+### `workbench-cloud`
+
+- verify that the runtime exposes a serializable `snapshot`
+- verify that `getCloudSaveOptions()` or an equivalent host path exists when cloud save is in scope
+- verify whether `cover` is provided; if not, explicitly state that cloud save is state-only without cover enhancement
+- verify restore/delete behavior if history is enabled
+
+### `workbench-template`
+
+- verify the source of `generatorImage`, `generatorTag`, `template`, and `originImageUrl` when applicable
+- verify that template JSON excludes private UI state
+- state the embed level explicitly: `embed-basic`, `embed-canvas-only`, or `embed-canvas-panel`
+- verify customize / template restore behavior when requested
+
 ## Required Wrap-Up
 
 After a generator task, the final response must include:
 
 - `Task framing`: new build / compatibility refactor / standardization refactor / reduced-scope task
-- `Current stage`: for old generator work, Stage 1/2/3/4 or equivalent partial state; for new generators, `not completed` or `reached standardization completion state`
+- `Current stage`: for old generator work, `Stage 1/2/3/4` from `Old Generator Refactor Stages`, or an explicit equivalent partial state; for new generators, `not completed` or `reached standardization completion state`
 - `Completed items`
 - `Incomplete items`
 - `Can standardization be claimed`: yes / no
@@ -365,11 +453,11 @@ If `Can standardization be claimed = no`, explicitly say that the result has not
 Stop immediately and revise the approach if any of the following happens during a new generator initial build without an explicit waiver:
 
 - creating a custom `full` page shell
-- creating a custom `index.html` shell for `full` mode instead of the standard entry that mounts `generator-workbench`
+- creating shell-owned `full` chrome in runtime code instead of using the standard workbench host context
 - adding custom top bars, login buttons, export buttons, or Studio buttons in the shell
 - treating `generator-workbench` as a later enhancement
 - using "start simple first" or "just a demo first" as justification
-- introducing `full.html` as another default full entry
+- treating separate `full` / `embed` entry files as the mandatory default implementation
 - converting the default `html` path into a Vue project instead of using Vue by CDN
 - switching the default `html` + `generator-workbench` path to another component library or package-managed UI stack instead of keeping `atomm-ui` + CDN
 - hardcoding `appKey` in runtime or business modules instead of reading the top-level `config.json`
@@ -378,14 +466,18 @@ If any of these occur, discard that shell plan and return to the `generator-work
 
 ## Common Mistakes
 
+### High-Risk (stop and fix immediately)
+
 - treating weak signals as automatic trigger without one clarifying question
 - asking a non-technical user to install `generator-sdk-mcp` manually before checking whether the AI can do it
 - installing MCP without verifying that the server or tools are actually available
 - stopping the task because MCP is unavailable instead of using documentation fallback
 - asking new-generator users for `appKey`, framework, SDK features, or template support before applying the standard default path
+- enabling template capability just because `generator-workbench` is used, even though the user only asked for shell-level or cloud-level capabilities
+- forcing publish-template UI, template JSON work, or customize flow into a `workbench-basic` or `workbench-cloud` task
 - creating a custom full-page shell for a new generator instead of mounting `generator-workbench`
-- forgetting that `index.html` is the default `full` entry and `embed.html` is the default `embed` entry
-- adding `full.html` by default even though the user did not ask for it
+- treating `full/embed` as mandatory dual HTML entry files instead of runtime host contexts
+- adding `full.html` or `embed.html` by default even though the actual host architecture does not require them
 - treating "minimal SDK capabilities" as permission to skip `generator-workbench`
 - treating `generator-workbench` as a later enhancement instead of the default full-mode host path for new generators
 - treating user silence as permission to skip the official host shell
@@ -393,19 +485,23 @@ If any of these occur, discard that shell plan and return to the `generator-work
 - building a demo shell first and planning to replace it with `generator-workbench` later
 - adding shell-level login/export/Studio actions outside `generator-workbench` without an explicit waiver
 - using `generate_code` as the main skeleton path for a new generator instead of `generate_runtime_starter`
-- generating only `full` and forgetting `embed`
+- implementing only the workbench-hosted `full` context and forgetting that the runtime still needs `embed` context support
 - missing `getPanelSchema()`
 - hardcoding the panel so the host cannot filter fields
-- rendering navigation or platform buttons in `embed`
+- rendering navigation or shell-level platform buttons in `embed` context
 - after integrating `generator-workbench` on the default `html` path, still generating business UI with another component library or local package-managed UI stack instead of `atomm-ui` + CDN
 - assuming that loading `atomm-ui` CSS in `index.html` automatically styles runtime business UI inside `generator-workbench`
 - forgetting that `generator-workbench` may mount runtime panel or canvas into a Shadow Root or another isolated style root
 - generating runtime business UI with `atomm-ui` components but without a runtime-side style injection strategy
-- rewriting an old generator before checking compatibility constraints
-- turning the default `html` path into a Vue project instead of keeping it HTML-first and loading Vue via CDN when needed
 - hardcoding `appKey` in source code instead of reading the outermost `config.json`
 - inventing private template JSON instead of using a unified template protocol
 - saying Stage 1/2 or reduced-scope delivery already equals standardization completion
+
+### Lower-Risk (review before delivery)
+
+- rewriting an old generator before checking compatibility constraints
+- turning the default `html` path into a Vue project instead of keeping it HTML-first and loading Vue via CDN when needed
+- copying complex iframe-host glue code from a legacy project into a generator that does not actually need it
 
 ## Implementation References
 
