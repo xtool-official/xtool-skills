@@ -203,7 +203,8 @@ Use the following defaults unless the user explicitly asks otherwise:
 - explicit template capability: `template` only when publish / template page / customize / template import-export is required
 - app key config: top-level `config.json`
 - runtime scope: support both `full` context and `embed` context
-- runtime interfaces: `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, `export`, and `subscribe`
+- runtime interfaces: `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, and `subscribe`
+- export: registered via `sdk.export.register()` on the SDK side; `export` is NOT a method on the runtime object
 - browser runtime exposure: `window.__GENERATOR_RUNTIME__`
 - Vue usage on the default `html` path: CDN only, not a Vue-project scaffold
 - business UI library after `generator-workbench` integration on the default `html` path: `atomm-ui`
@@ -225,7 +226,7 @@ Default behavior:
 - keep `config.json` at the outermost directory and read `appKey` from it
 - make the runtime support both `full` context and `embed` context
 - expose `window.__GENERATOR_RUNTIME__`
-- provide `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, `export`, and `subscribe`
+- provide `mount`, `getState`, `setState`, `patchState`, `getPanelSchema`, and `subscribe` on the runtime object; register export via `sdk.export.register()`, not as a runtime method
 - for new generators, default the host shell to `generator-workbench` in `mode: 'shell'` for `full` context
 - keep `embed` context as workbench-hosted `?mode=embed` by default, with runtime rendering adapted to that context and without shell-level platform UI
 - only add a dedicated `embed` page or another explicit entry file when the embedding architecture truly requires it
@@ -394,6 +395,8 @@ Do not claim any of the following unless this gate is satisfied:
 - if templates are involved, a unified template protocol is integrated
 - when runtime business UI uses `atomm-ui`, the workbench-hosted `full` context is verified for actual runtime component styles, not just shell styles
 - compatibility, migration, or CMS-related notes are included
+- `config.json` exists at the project root with at least an `appKey` field
+- the generator entry script reads `appKey` from `config.json` at runtime, not from a hardcoded string literal in source code
 
 If `generator-workbench` is not used for a new generator in initial development, the final wrap-up must include the explicit user waiver. Otherwise, standardization cannot be claimed.
 
@@ -430,6 +433,48 @@ When the task touches `generator-workbench`, the final delivery must include the
 - state the embed level explicitly: `embed-basic`, `embed-canvas-only`, or `embed-canvas-panel`
 - verify customize / template restore behavior when requested
 
+## Behavioral Smoke Tests
+
+Before claiming `workbench` integration is complete, verify ALL of the following behavioral points — not just code-level declarations.
+
+### Pre-flight (all profiles)
+
+- `workbench.sdk` is assigned to the workbench element (not just instantiated in a local variable)
+- `workbench.runtime` is assigned to the workbench element
+- `workbench.config.atommProEnv` is set (not `undefined`)
+- `workbench.config.atommProDomain` is set (not `undefined`)
+- `workbench.mount()` is called **after** all three assignments above
+- `window.__GENERATOR_RUNTIME__` is assigned and points to the same runtime object
+
+Missing any one of the above will cause the avatar click to be unresponsive.
+
+### `workbench-basic` behavioral verification
+
+- Avatar / user icon click → login modal appears
+  - requires: `atommProEnv` + `atommProDomain` + `sdk` auth initialized + `workbench.sdk` assigned before `mount()`
+- Export button click → download dialog or SDK export flow triggered
+  - requires: `sdk.export.register()` called with a provider; `exportEnabled: true`
+- Template publishing UI is **not** visible (`templateEnabled` absent or `false`)
+
+### `workbench-cloud` behavioral verification
+
+- All `workbench-basic` checks above
+- Cloud save trigger → `getCloudSaveOptions()` returns an object with `{ title, snapshot }`
+  - verify `snapshot` is JSON-serializable (no circular refs, no DOM nodes)
+  - if `cover` is not provided, state this explicitly
+- History button is visible and `historyEnabled: true` is set in config
+
+### `workbench-template` behavioral verification
+
+- All `workbench-cloud` checks above
+- "Publish as Template" button is visible → `templateEnabled: true` must be in config
+- Clicking "Publish as Template" → dialog opens
+  - requires: runtime emits `params_change` with a `data.cover` field when state changes
+  - requires: runtime emits `template_publish_media_change` with `generatorImage` when a template is selected
+  - verify: `generatorImage`, `generatorTag`, `cover`, `originImageUrl` sources are documented (from runtime events or `getTemplatePublishPayload`)
+- `select_template` event is emitted when a template preset card is clicked
+- Customize / restore flow: runtime correctly handles `setState()` from an imported template snapshot
+
 ## Required Wrap-Up
 
 After a generator task, the final response must include:
@@ -445,6 +490,14 @@ After a generator task, the final response must include:
 - `Official host shell used`: yes / no
 - `If no, explicit user waiver`: quote the user request or say `none`
 - `Workbench integration evidence`: file paths, MCP path, or integration approach
+
+After completing `generator-workbench` integration, generate `__tests__/workbench-integration.test.ts` using the test template from `reference.md` § Integration Test Template. Replace import paths to point to the actual runtime and config factories. Keep only the test blocks that match the current profile:
+
+- `workbench-basic` → remove template-only and cloud-only blocks
+- `workbench-cloud` → remove template-only blocks
+- `workbench-template` → keep all blocks
+
+Do **not** import anything from `@atomm-developer/generator-workbench/testing`. The generated test file must be self-contained and runnable with `npx vitest run`.
 
 If `Can standardization be claimed = no`, explicitly say that the result has not yet reached the standardization completion state.
 
@@ -463,6 +516,19 @@ Stop immediately and revise the approach if any of the following happens during 
 - hardcoding `appKey` in runtime or business modules instead of reading the top-level `config.json`
 
 If any of these occur, discard that shell plan and return to the `generator-workbench` path.
+
+## Common Failure Patterns
+
+The following symptoms indicate specific missing implementation steps. Use this table to diagnose and fix integration issues before delivery.
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Avatar click → nothing happens | `atommProEnv` or `atommProDomain` not set; or `workbench.sdk` not assigned to the element before `mount()` | Set both fields in `workbench.config`; assign `sdk` to `workbench.sdk` before calling `workbench.mount()` |
+| "Publish as Template" button is invisible | `templateEnabled` not set to `true` in config | Add `templateEnabled: true` to `workbench.config` |
+| "Publish as Template" button click → dialog does not open | Runtime never emits `params_change` with a `cover` field, or `template_publish_media_change` never fires | Implement runtime event emission for these events; or configure `getTemplatePublishPayload` in the workbench config |
+| Export button click → nothing happens | `sdk.export.register()` not called; or `exportEnabled: false` or missing | Call `sdk.export.register()` with a provider that returns export data; ensure `exportEnabled: true` |
+| Cloud save → title is always `undefined` | `getCloudSaveOptions()` is missing or returns no `title` field | Implement `getCloudSaveOptions` and return `{ title, snapshot }` with a non-empty `title` |
+| `config.json` missing / `appKey` hardcoded | AI concluded `config.json` is optional because `GeneratorSDK.init()` only reads `appKey` from its call-site parameter — it does **NOT** automatically read `config.json`. `config.json` is enforced by this skill, not by the SDK. Without it, production deployments cannot inject the real `appKey` without modifying source code. | Create `config.json` at project root with `{ "appKey": "..." }`. Read it in the entry script: `fetch('./config.json').then(r => r.json()).then(cfg => GeneratorSDK.init({ appKey: cfg.appKey }))`, or use `import config from '../config.json'` for bundled projects. |
 
 ## Common Mistakes
 
